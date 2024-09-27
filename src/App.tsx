@@ -1,24 +1,28 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { useEffect, useState, useContext } from "react";
+import { BinanceContext } from "./contaxt/binance-context";
+
 
 function App() {
+  // State to store the price
+  const {
+    price,
+    chartContainerRef,
+    candleData,
+    setTokenFeed,
+    setInterval,
+    tokenFeed,
+    interval
+  } = useContext(BinanceContext)
+
+  // tokenFeed must be one of them "btcusdt" | "dotusdt" | "ethusdt"
+  // interval must be one of them "1m" | "3m" | "5m"
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+
+      <div>
+        <h1>BTC/USDT Real-Time Candlestick Chart</h1>
+        <div ref={chartContainerRef} style={{ width: '100%', height: '400px' }}></div>
+      </div>
     </div>
   );
 }
