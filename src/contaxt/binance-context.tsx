@@ -20,7 +20,7 @@ const defaultValues = {
     tokenFeed: "btcusdt",
     setTokenFeed: () => { },
     setInterval: () => { },
-    interval: "1m",
+    interval: "3m",
 
 }
 
@@ -49,13 +49,13 @@ export const BinanceProvider = ({ children }: BinanceProviderInterface) => {
     const [interval, setInterval] = useState<string>(defaultValues.interval);
 
     // setting previous data when change tokenFeed (preserving data)
-    useEffect(() => {
-        const previousData = localStorage.getItem(tokenFeed);
-        if (!previousData) return;
+    // useEffect(() => {
+    //     const previousData = localStorage.getItem(tokenFeed);
+    //     if (!previousData) return;
 
-        setCandleData(JSON.parse(previousData));
-        // console.log("refresh")
-    }, [tokenFeed])
+    //     setCandleData(JSON.parse(previousData));
+    //     // console.log("refresh")
+    // }, [tokenFeed])
 
     useEffect(() => {
         const binanceSocket = new WebSocket(`wss://stream.binance.com:9443/ws/${tokenFeed}@kline_${interval}`);
@@ -64,7 +64,7 @@ export const BinanceProvider = ({ children }: BinanceProviderInterface) => {
         binanceSocket.onmessage = (event: MessageEvent) => {
             const data = JSON.parse(event.data);
             const kline = data.k;
-            // console.log(kline);
+            console.log(kline);
             setPrice(kline.c);
 
             const newCandle: CandleData = {
@@ -75,19 +75,30 @@ export const BinanceProvider = ({ children }: BinanceProviderInterface) => {
                 close: parseFloat(kline.c),
             };
 
-            if (kline.x) {
-                setCandleData((prevCandles) => [...prevCandles, newCandle]);
+
+            if (candleData[candleData.length - 1]?.time >= newCandle?.time) {
+                console.log("duplicate time ")
             } else {
 
-                setCandleData((prevCandles) => {
-                    const candlesCopy = [...prevCandles];
-                    if (candlesCopy.length > 0) {
-                        candlesCopy[candlesCopy.length - 1] = newCandle;
-                    }
-                    return candlesCopy;
-                });
+
+                if (kline.x) {
+
+                    setCandleData((prevCandles) => [...prevCandles, newCandle]);
+                } else {
+
+
+                    setCandleData((prevCandles) => {
+                        const candlesCopy = [...prevCandles];
+                        if (candlesCopy.length > 0) {
+                            candlesCopy[candlesCopy.length - 1] = newCandle;
+                        }
+                        return candlesCopy;
+                    });
+                }
             }
+
         };
+
 
         return () => {
             binanceSocket.close();
@@ -100,6 +111,9 @@ export const BinanceProvider = ({ children }: BinanceProviderInterface) => {
             const chart = createChart(chartContainerRef.current, {
                 width: chartContainerRef.current.clientWidth,
                 height: 400,
+                timeScale: {
+                    timeVisible: true,
+                }
             });
 
             const candleSeries = chart.addCandlestickSeries();
@@ -113,9 +127,24 @@ export const BinanceProvider = ({ children }: BinanceProviderInterface) => {
     }, []);
 
     // setting chart on change candle data
+    // useEffect(() => {
+    //     if (candleData.length && candleSeriesRef.current) {
+    //         candleSeriesRef.current.setData(candleData.filter());
+    //         localStorage.setItem(tokenFeed, JSON.stringify(candleData));
+    //     }
+    // }, [candleData]);
     useEffect(() => {
         if (candleData.length && candleSeriesRef.current) {
-            candleSeriesRef.current.setData(candleData);
+            candleSeriesRef.current.setData(candleData.sort((a, b) => {
+                if (new Date(a.time).getTime() > new Date(b.time).getTime()) {
+                    return 1;
+                }
+                if (new Date(a.time).getTime() < new Date(b.time).getTime()) {
+                    return -1;
+                }
+                return 0;
+            }).filter((item, index) => candleData.indexOf(item) === index))
+
             localStorage.setItem(tokenFeed, JSON.stringify(candleData));
         }
     }, [candleData]);
